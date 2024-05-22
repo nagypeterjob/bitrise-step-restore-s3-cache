@@ -27,8 +27,11 @@ const (
 	maxKeyCount = 8
 )
 
-// ErrCacheNotFound ...
-var ErrCacheNotFound = errors.New("no cache archive found for the provided keys")
+var (
+	errCacheNotFound = errors.New("no cache archive found for the provided keys")
+	errS3KeyNotFound = errors.New("key not found in s3 bucket")
+	errNoKeyProvided = errors.New("no keys provided")
+)
 
 type DownloadService struct {
 	Client          *s3.Client
@@ -37,8 +40,6 @@ type DownloadService struct {
 	AccessKeyID     string
 	SecretAccessKey string
 }
-
-var errS3KeyNotFound = errors.New("key not found in s3 bucket")
 
 // Download archive from the provided S3 bucket based on the provided keys in params.
 // If there is no match for any of the keys, the error is ErrCacheNotFound.
@@ -64,44 +65,33 @@ func (s DownloadService) Download(ctx context.Context, params network.DownloadPa
 	}
 
 	s.Client = s3.NewFromConfig(*cfg)
-	return s.downloadWithS3Client(ctx, truncatedKeys, params.DownloadPath, params.NumFullRetries, logger)
+	return s.downloadWithS3Client(ctx, truncatedKeys, params, logger)
 }
 
 func (s DownloadService) downloadWithS3Client(
 	ctx context.Context,
 	cacheKeys []string,
-	downloadPath string,
-	numFullRetries int,
+	params network.DownloadParams,
 	logger log.Logger,
 ) (string, error) {
-	var firstValidKey string
-	fmt.Println(cacheKeys)
-	err := retry.Times(uint(numFullRetries)).Wait(5 * time.Second).TryWithAbort(func(attempt uint) (error, bool) {
-		// TODO: List prefixes
-		for _, key := range cacheKeys {
-			fileKey := strings.Join([]string{key, "tzst"}, ".")
-			keyFound, err := s.firstAvailableKey(ctx, fileKey)
-			if err != nil {
-				if errors.Is(errS3KeyNotFound, err) {
-					logger.Debugf("key %s not found in bucket: %s", key, err)
-					continue
-				}
-
-				logger.Debugf("validate key %s: %s", key, err)
-				return err, false
-			}
-
-			firstValidKey = keyFound
-			return nil, true
-		}
-		return ErrCacheNotFound, true
-	})
+	firstValidKey, err := s.firstAvailableKey(ctx, cacheKeys, logger)
 	if err != nil {
-		return "", fmt.Errorf("key validation retries failed: %w", err)
+		if !errors.Is(errS3KeyNotFound, err) {
+			return "", fmt.Errorf("matching key: %w", err)
+		}
+
+		logger.Debugf("Could not match provided cache keys, falling back to find archive by prefix...")
+		firstValidKey, err = s.firstAvailableKeyWithPrefix(ctx, cacheKeys)
+		if err != nil {
+			if errors.Is(errS3KeyNotFound, err) {
+				return "", errCacheNotFound
+			}
+			return "", fmt.Errorf("finding archive by prefix: %w", err)
+		}
 	}
 
-	err = retry.Times(uint(numFullRetries)).Wait(5 * time.Second).TryWithAbort(func(attempt uint) (error, bool) {
-		if err := s.getObject(ctx, firstValidKey, downloadPath); err != nil {
+	err = retry.Times(uint(params.NumFullRetries)).Wait(5 * time.Second).TryWithAbort(func(attempt uint) (error, bool) {
+		if err := s.getObject(ctx, firstValidKey, params.DownloadPath); err != nil {
 			return fmt.Errorf("download object: %w", err), false
 		}
 
@@ -114,25 +104,58 @@ func (s DownloadService) downloadWithS3Client(
 	return firstValidKey, nil
 }
 
-func (s DownloadService) firstAvailableKey(ctx context.Context, key string) (string, error) {
-	_, err := s.Client.HeadObject(ctx, &s3.HeadObjectInput{
-		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(key),
-	})
-	if err != nil {
-		var apiError smithy.APIError
-		if errors.As(err, &apiError) {
-			switch apiError.(type) {
-			case *types.NotFound:
-				return "", errS3KeyNotFound
-			default:
-				return "", fmt.Errorf("aws api error: %w", err)
+func (s DownloadService) firstAvailableKey(
+	ctx context.Context,
+	keys []string,
+	logger log.Logger,
+) (string, error) {
+	for _, key := range keys {
+		fileKey := strings.Join([]string{key, "tzst"}, ".")
+
+		_, err := s.Client.HeadObject(ctx, &s3.HeadObjectInput{
+			Bucket: aws.String(s.Bucket),
+			Key:    aws.String(fileKey),
+		})
+		if err != nil {
+			var apiError smithy.APIError
+			if errors.As(err, &apiError) {
+				switch apiError.(type) {
+				case *types.NotFound:
+					logger.Debugf("archive with key %s not found in bucket", key)
+					continue
+				default:
+					return "", fmt.Errorf("aws api error: %w", err)
+				}
 			}
+			return "", fmt.Errorf("generic aws error: %w", err)
 		}
-		return "", fmt.Errorf("generic aws error: %w", err)
+
+		return key, nil
+	}
+	return "", errS3KeyNotFound
+}
+
+func (s DownloadService) firstAvailableKeyWithPrefix(ctx context.Context, keys []string) (string, error) {
+	for _, key := range keys {
+		p := s3.NewListObjectsV2Paginator(s.Client, &s3.ListObjectsV2Input{
+			Bucket: aws.String(s.Bucket),
+			Prefix: aws.String(key),
+		}, func(o *s3.ListObjectsV2PaginatorOptions) {})
+
+		pCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		// Getting the first "valid" key from the first result page is enough
+		page, err := p.NextPage(pCtx)
+		if err != nil {
+			return "", fmt.Errorf("find artifact for key prefix: %w", err)
+		}
+
+		if len(page.Contents) != 0 && page.Contents[0].Key != nil {
+			return *page.Contents[0].Key, nil
+		}
 	}
 
-	return key, nil
+	return "", errS3KeyNotFound
 }
 
 func (s *DownloadService) getObject(ctx context.Context, key string, downloadPath string) error {
@@ -189,9 +212,13 @@ func loadAWSCredentials(
 }
 
 func validateKeys(keys []string) ([]string, error) {
+	if len(keys) == 0 {
+		return nil, errNoKeyProvided
+	}
 	if len(keys) > maxKeyCount {
 		return nil, fmt.Errorf("maximum number of keys is %d, %d provided", maxKeyCount, len(keys))
 	}
+
 	truncatedKeys := make([]string, 0, len(keys))
 	for _, key := range keys {
 		if strings.Contains(key, ",") {
