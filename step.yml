@@ -116,24 +116,23 @@ inputs:
       opts:
         category: AWS
         title: "AWS Bucket name"
+        is_required: true
+        is_expeand: true
         summary: Provide an AWS bucket name to be used as cache backend.
         description: |-
           Bring your own bucket: exercise full control over the cache location.
 
           The provided AWS bucket acts as cache backend for the Restore Cache step.
 
-          When the bucket name is provided, the step expects either:
+          The step expects either:
           - CACHE_AWS_ACCESS_KEY_ID, CACHE_AWS_SECRET_ACCESS_KEY secrets to be setup for the workflow
           - The build is running on an EC2 instance. In this case, the steps expects the instance to have access to the bucket.
-
-          When left empty, the step will use the default cache storage, provided by Bitrise.
-        is_required: false
-        is_expeand: true
 
   - aws_region:
       opts:
         category: AWS
         title: "AWS Region"
+        is_required: true
         summary: Region of the S3 bucket.
         description: |-
           AWS Region is only considered when a bucket name is defined.
@@ -171,7 +170,6 @@ inputs:
           - me-central-1
           - af-south-1
           - il-central-1
-        is_required: false
         is_expeand: true
 
   - aws_access_key_id: $CACHE_AWS_ACCESS_KEY_ID
