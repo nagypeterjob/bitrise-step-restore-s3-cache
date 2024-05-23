@@ -200,7 +200,6 @@ inputs:
     summary: The AWS_SECRET_ACCESS_KEY with access to the bucket.
     title: AWS_SECRET_ACCESS_KEY
 
-
 outputs:
 - BITRISE_CACHE_HIT:
   opts:
