@@ -80,137 +80,134 @@ toolkit:
     package_name: github.com/bitrise-steplib/bitrise-step-restore-s3-cache
 
 inputs:
-  - key:
-    opts:
-      title: Cache keys
-      summary: Keys used for restoring a cache archive. The key can contain template elements.
-      description: |-
-        Keys used for restoring a cache archive. One cache key per line in priority order.
+- key:
+  opts:
+    title: Cache keys
+    summary: Keys used for restoring a cache archive. The key can contain template elements.
+    description: |-
+      Keys used for restoring a cache archive. One cache key per line in priority order.
 
-        The key supports template elements for creating dynamic cache keys. These dynamic keys change the final key value based on the build environment or files in the repo in order to create new cache archives. See the Step description for more details and examples.
+      The key supports template elements for creating dynamic cache keys. These dynamic keys change the final key value based on the build environment or files in the repo in order to create new cache archives. See the Step description for more details and examples.
 
-        The maximum length of a key is 512 characters (longer keys get truncated) and you can list at most 8 keys using this input. Commas (`,`) are not allowed in keys.
-      is_required: true
+      The maximum length of a key is 512 characters (longer keys get truncated) and you can list at most 8 keys using this input. Commas (`,`) are not allowed in keys.
+    is_required: true
 
-  - verbose: "false"
-    opts:
-      title: Verbose logging
-      summary: Enable logging additional information for troubleshooting.
-      is_required: true
-      value_options:
-        - "true"
-        - "false"
+- verbose: "false"
+  opts:
+    title: Verbose logging
+    summary: Enable logging additional information for troubleshooting.
+    is_required: true
+    value_options:
+      - "true"
+      - "false"
 
-  - retries: 3
-    opts:
-      category: Debugging
-      title: Number of retries
-      summary: Number of retries to attempt when downloading a cache archive fails.
-      description: |-
-        Number of retries to attempt when downloading a cache archive fails.
+- retries: 3
+  opts:
+    category: Debugging
+    title: Number of retries
+    summary: Number of retries to attempt when downloading a cache archive fails.
+    description: |-
+      Number of retries to attempt when downloading a cache archive fails.
 
-        The value 0 means no retries are attempted.
-      is_required: true
+      The value 0 means no retries are attempted.
+    is_required: true
 
-  - aws_bucket:
-      opts:
-        category: AWS
-        title: "AWS Bucket name"
-        is_required: true
-        is_expeand: true
-        summary: Provide an AWS bucket name to be used as cache backend.
-        description: |-
-          Bring your own bucket: exercise full control over the cache location.
+- aws_bucket:
+  opts:
+    category: AWS
+    title: AWS Bucket name
+    summary: Provide an AWS bucket name to be used as cache backend.
+    description: |-
+      Bring your own bucket: exercise full control over the cache location.
 
-          The provided AWS bucket acts as cache backend for the Restore Cache step.
+      The provided AWS bucket acts as cache backend for the Restore Cache step.
 
-          The step expects either:
-          - CACHE_AWS_ACCESS_KEY_ID, CACHE_AWS_SECRET_ACCESS_KEY secrets to be setup for the workflow
-          - The build is running on an EC2 instance. In this case, the steps expects the instance to have access to the bucket.
+      The step expects either:
+      - CACHE_AWS_ACCESS_KEY_ID, CACHE_AWS_SECRET_ACCESS_KEY secrets to be setup for the workflow
+      - The build is running on an EC2 instance. In this case, the steps expects the instance to have access to the bucket.
+    is_required: true
 
-  - aws_region:
-      opts:
-        category: AWS
-        title: "AWS Region"
-        is_required: true
-        summary: Region of the S3 bucket.
-        description: |-
-          AWS Region is only considered when a bucket name is defined.
-        value_options:
-          - us-east-1
-          - us-east-2
-          - us-west-1
-          - us-west-2
-          - ca-central-1
-          - ca-west-1
-          - eu-north-1
-          - eu-west-3
-          - eu-west-2
-          - eu-west-1
-          - eu-central-1
-          - eu-central-2
-          - eu-south-1
-          - eu-south-2
-          - ap-south-1
-          - ap-south-2
-          - ap-northeast-1
-          - ap-northeast-2
-          - ap-northeast-3
-          - ap-southeast-1
-          - ap-southeast-2
-          - ap-southeast-3
-          - ap-southeast-4
-          - ap-east-1
-          - sa-east-1
-          - cn-north-1
-          - cn-northwest-1
-          - us-gov-east-1
-          - us-gov-west-1
-          - me-south-1
-          - me-central-1
-          - af-south-1
-          - il-central-1
-        is_expeand: true
+- aws_region: us-east-1
+  opts:
+    category: AWS
+    title: AWS Region
+    summary: Region of the S3 bucket.
+    description: |-
+      AWS Region is only considered when a bucket name is defined.
+    value_options:
+    - us-east-1
+    - us-east-2
+    - us-west-1
+    - us-west-2
+    - ca-central-1
+    - ca-west-1
+    - eu-north-1
+    - eu-west-3
+    - eu-west-2
+    - eu-west-1
+    - eu-central-1
+    - eu-central-2
+    - eu-south-1
+    - eu-south-2
+    - ap-south-1
+    - ap-south-2
+    - ap-northeast-1
+    - ap-northeast-2
+    - ap-northeast-3
+    - ap-southeast-1
+    - ap-southeast-2
+    - ap-southeast-3
+    - ap-southeast-4
+    - ap-east-1
+    - sa-east-1
+    - cn-north-1
+    - cn-northwest-1
+    - us-gov-east-1
+    - us-gov-west-1
+    - me-south-1
+    - me-central-1
+    - af-south-1
+    - il-central-1
+    is_required: true
 
-  - aws_access_key_id: $CACHE_AWS_ACCESS_KEY_ID
-    opts:
-      category: AWS
-      description: |
-        The access key id that matches the secret access key.
+- aws_access_key_id: $CACHE_AWS_ACCESS_KEY_ID
+  opts:
+    category: AWS
+    description: |
+      The access key id that matches the secret access key.
 
-        The credentials need to be from a user that has at least the following permissions
-        in the bucket specified bellow `s3:ListObjects`, `s3:PutObject`, `s3:GetObjectAttributes` and `s3:GetObject`.
+      The credentials need to be from a user that has at least the following permissions
+      in the bucket specified bellow `s3:ListObjects`, `s3:PutObject`, `s3:GetObjectAttributes` and `s3:GetObject`.
 
-        If the build instance has S3 access via IAM Instance role, this variable can be left empty.
-      is_expand: true
-      is_required: false
-      is_sensitive: true
-      summary: The AWS_ACCESS_KEY_ID with access to the bucket.
-      title: AWS_ACCESS_KEY_ID
+      If the build instance has S3 access via IAM Instance role, this variable can be left empty.
+    is_required: false
+    is_sensitive: true
+    summary: The AWS_ACCESS_KEY_ID with access to the bucket.
+    title: AWS_ACCESS_KEY_ID
 
-  - aws_secret_access_key: $CACHE_AWS_SECRET_ACCESS_KEY
-    opts:
-      category: AWS
-      description: |
-        The secret access key that matches the secret key ID.
+- aws_secret_access_key: $CACHE_AWS_SECRET_ACCESS_KEY
+  opts:
+    category: AWS
+    description: |
+      The secret access key that matches the secret key ID.
 
-        The credentials need to be from a user that has at least the following permissions
-        in the bucket specified bellow `s3:ListObjects`, `s3:PutObject`, `s3:GetObjectAttributes` and `s3:GetObject`.
+      The credentials need to be from a user that has at least the following permissions
+      in the bucket specified bellow `s3:ListObjects`, `s3:PutObject`, `s3:GetObjectAttributes` and `s3:GetObject`.
 
-        If the build instance has S3 access via IAM Instance role, this variable can be left empty.
-      is_expand: true
-      is_required: false
-      is_sensitive: true
-      summary: The AWS_SECRET_ACCESS_KEY with access to the bucket.
-      title: AWS_SECRET_ACCESS_KEY
+      If the build instance has S3 access via IAM Instance role, this variable can be left empty.
+    is_required: false
+    is_sensitive: true
+    summary: The AWS_SECRET_ACCESS_KEY with access to the bucket.
+    title: AWS_SECRET_ACCESS_KEY
+
 
 outputs:
-  - BITRISE_CACHE_HIT:
-    opts:
-      title: Cache hit
-      description: |-
-        Indicates if a cache entry was restored. Possible values:
+- BITRISE_CACHE_HIT:
+  opts:
+    title: Cache hit
+    description: |-
+      Indicates if a cache entry was restored. Possible values:
 
-        - `exact`: Exact cache hit for the first requested cache key
-        - `partial`: Cache hit for a key other than the first
-        - `false` No cache hit, nothing was restored
+      - `exact`: Exact cache hit for the first requested cache key
+      - `partial`: Cache hit for a key other than the first
+      - `false` No cache hit, nothing was restored

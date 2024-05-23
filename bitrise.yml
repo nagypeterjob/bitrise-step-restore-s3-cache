@@ -6,12 +6,6 @@ workflows:
     steps:
     - git::https://github.com/bitrise-steplib/steps-check.git: { }
 
-  e2e:
-    steps:
-    - git::https://github.com/bitrise-steplib/steps-check.git:
-        inputs:
-        - workflow: e2e
-
   generate_readme:
     steps:
     - git::https://github.com/bitrise-steplib/steps-readme-generator.git@main:
