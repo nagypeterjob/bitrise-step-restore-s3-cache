@@ -64,16 +64,16 @@ source_code_url: https://github.com/bitrise-steplib/bitrise-step-restore-s3-cach
 support_url: https://github.com/bitrise-steplib/bitrise-step-restore-s3-cache/issues
 
 type_tags:
-  - utility
+- utility
 
 run_if: .IsCI
 is_skippable: true
 
 deps:
   brew:
-    - name: zstd
+  - name: zstd
   apt_get:
-    - name: zstd
+  - name: zstd
 
 toolkit:
   go:
@@ -98,8 +98,8 @@ inputs:
     summary: Enable logging additional information for troubleshooting.
     is_required: true
     value_options:
-      - "true"
-      - "false"
+    - "true"
+    - "false"
 
 - retries: 3
   opts:
