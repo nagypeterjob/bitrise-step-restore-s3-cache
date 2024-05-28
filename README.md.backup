@@ -7,7 +7,7 @@ Restores build cache using a cache key. This Step needs to be used in combinatio
 <details>
 <summary>Description</summary>
 
-Restores build cache using a cache key. This Step needs to be used in combination with **Save S3 Cache**.
+Restores build cache using a cache key. This Step needs to be used in combination with **Save Cache**.
 
 #### About key-based caching
 
@@ -34,6 +34,7 @@ Functions available in a template:
 `checksum`: This function takes one or more file paths and computes the SHA256 [checksum](https://en.wikipedia.org/wiki/Checksum) of the file contents. This is useful for creating unique cache keys based on files that describe content to cache.
 
 Examples of using `checksum`:
+
 - `cache-key-{{ checksum "package-lock.json" }}`
 - `cache-key-{{ checksum "**/Package.resolved" }}`
 - `cache-key-{{ checksum "**/*.gradle*" "gradle.properties" }}`
@@ -41,6 +42,7 @@ Examples of using `checksum`:
 `getenv`: This function returns the value of an environment variable or an empty string if the variable is not defined.
 
 Examples of `getenv`:
+
 - `cache-key-{{ getenv "PR" }}`
 - `cache-key-{{ getenv "BITRISEIO_PIPELINE_ID" }}`
 
@@ -73,34 +75,33 @@ Add this step directly to your workflow in the [Bitrise Workflow Editor](https:/
 
 You can also run this step directly with [Bitrise CLI](https://github.com/bitrise-io/bitrise).
 
-
 Check out [Workflow Recipes](https://github.com/bitrise-io/workflow-recipes#-key-based-caching-beta) for platform-specific examples!
 
 #### Restore and save cache using a key that includes a checksum
 
 ```yaml
 steps:
-- restore-cache@1:
-    inputs:
-    - key: npm-cache-{{ checksum "package-lock.json" }}
+  - restore-cache@1:
+      inputs:
+        - key: npm-cache-{{ checksum "package-lock.json" }}
 
-# Build steps
+  # Build steps
 
-- save-cache@1:
-    inputs:
-    - key: npm-cache-{{ checksum "package-lock.json" }}
-    - paths: node_modules
+  - save-cache@1:
+      inputs:
+        - key: npm-cache-{{ checksum "package-lock.json" }}
+        - paths: node_modules
 ```
 
 #### Use fallback key when exact cache match is not available
 
 ```yaml
 steps:
-- restore-cache@1:
-    inputs:
-    - key: |-
-        npm-cache-{{ checksum "package-lock.json" }}
-        npm-cache-
+  - restore-cache@1:
+      inputs:
+        - key: |-
+            npm-cache-{{ checksum "package-lock.json" }}
+            npm-cache-
 ```
 
 The Step will look up the first key (`npm-cache-a982ee8f` for example). If there is no exact match for this key (because there is only a cache archive for `npm-cache-233ad571`), then it will look up any cache archive whose key starts with `npm-cache-`.
@@ -111,36 +112,33 @@ Cache is not guaranteed to work across different Bitrise Stacks (different OS or
 
 ```yaml
 steps:
-- restore-cache@1:
-    inputs:
-    - key: |-
-        {{ .OS }}-{{ .Arch }}-npm-cache-{{ checksum "package-lock.json" }}
-        {{ .OS }}-{{ .Arch }}-npm-cache-
+  - restore-cache@1:
+      inputs:
+        - key: |-
+            {{ .OS }}-{{ .Arch }}-npm-cache-{{ checksum "package-lock.json" }}
+            {{ .OS }}-{{ .Arch }}-npm-cache-
 ```
-
 
 ## ⚙️ Configuration
 
 <details>
 <summary>Inputs</summary>
 
-| Key | Description | Flags | Default |
-| --- | --- | --- | --- |
-| `key` | Keys used for restoring a cache archive. One cache key per line in priority order.  The key supports template elements for creating dynamic cache keys. These dynamic keys change the final key value based on the build environment or files in the repo in order to create new cache archives. See the Step description for more details and examples.  The maximum length of a key is 512 characters (longer keys get truncated) and you can list at most 8 keys using this input. Commas (`,`) are not allowed in keys. | required |  |
-| `verbose` | Enable logging additional information for troubleshooting. | required | `false` |
-| `retries` | Number of retries to attempt when downloading a cache archive fails.  The value 0 means no retries are attempted. | required | `3` |
-| `aws_bucket` | Bring your own bucket: exercise full control over the cache location.  The provided AWS bucket acts as cache backend for the Restore Cache step.  The step expects either: - CACHE_AWS_ACCESS_KEY_ID, CACHE_AWS_SECRET_ACCESS_KEY secrets to be setup for the workflow - The build is running on an EC2 instance. In this case, the steps expects the instance to have access to the bucket. | required |  |
-| `aws_region` | AWS Region specifies the region where the bucket belongs. | required | `us-east-1` |
-| `aws_access_key_id` | The access key id that matches the secret access key.  The credentials need to be from a user that has at least the following permissions in the bucket specified bellow `s3:ListObjects`, `s3:PutObject`, `s3:GetObjectAttributes` and `s3:GetObject`.  If the build instance has S3 access via IAM Instance role, this variable can be left empty.  | sensitive | `$CACHE_AWS_ACCESS_KEY_ID` |
-| `aws_secret_access_key` | The secret access key that matches the secret key ID.  The credentials need to be from a user that has at least the following permissions in the bucket specified bellow `s3:ListObjects`, `s3:PutObject`, `s3:GetObjectAttributes` and `s3:GetObject`.  If the build instance has S3 access via IAM Instance role, this variable can be left empty.  | sensitive | `$CACHE_AWS_SECRET_ACCESS_KEY` |
+| Key       | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Flags    | Default |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `key`     | Keys used for restoring a cache archive. One cache key per line in priority order. The key supports template elements for creating dynamic cache keys. These dynamic keys change the final key value based on the build environment or files in the repo in order to create new cache archives. See the Step description for more details and examples. The maximum length of a key is 512 characters (longer keys get truncated) and you can list at most 8 keys using this input. Commas (`,`) are not allowed in keys. | required |         |
+| `verbose` | Enable logging additional information for troubleshooting.                                                                                                                                                                                                                                                                                                                                                                                                                                                                | required | `false` |
+| `retries` | Number of retries to attempt when downloading a cache archive fails. The value 0 means no retries are attempted.                                                                                                                                                                                                                                                                                                                                                                                                          | required | `3`     |
+
 </details>
 
 <details>
 <summary>Outputs</summary>
 
-| Environment Variable | Description |
-| --- | --- |
-| `BITRISE_CACHE_HIT` | Indicates if a cache entry was restored. Possible values:  - `exact`: Exact cache hit for the first requested cache key - `partial`: Cache hit for a key other than the first - `false` No cache hit, nothing was restored |
+| Environment Variable | Description                                                                                                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BITRISE_CACHE_HIT`  | Indicates if a cache entry was restored. Possible values: - `exact`: Exact cache hit for the first requested cache key - `partial`: Cache hit for a key other than the first - `false` No cache hit, nothing was restored |
+
 </details>
 
 ## 🙋 Contributing
@@ -150,7 +148,6 @@ We welcome [pull requests](https://github.com/bitrise-steplib/bitrise-step-resto
 For pull requests, work on your changes in a forked repository and use the Bitrise CLI to [run step tests locally](https://devcenter.bitrise.io/bitrise-cli/run-your-first-build/).
 
 **Note:** this step's end-to-end tests (defined in `e2e/bitrise.yml`) are working with secrets which are intentionally not stored in this repo. External contributors won't be able to run those tests. Don't worry, if you open a PR with your contribution, we will help with running tests and make sure that they pass.
-
 
 Learn more about developing steps:
 
