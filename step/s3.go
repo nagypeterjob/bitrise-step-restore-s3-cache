@@ -50,7 +50,7 @@ func (s DownloadService) Download(ctx context.Context, params network.DownloadPa
 	}
 
 	if s.Bucket == "" {
-		return "", fmt.Errorf("bucket must not be empty")
+		return "", fmt.Errorf("Bucket name must not be empty")
 	}
 
 	cfg, err := loadAWSCredentials(
@@ -61,7 +61,7 @@ func (s DownloadService) Download(ctx context.Context, params network.DownloadPa
 		logger,
 	)
 	if err != nil {
-		return "", fmt.Errorf("load aws credentials: %w", err)
+		return "", fmt.Errorf("load AWS credentials: %w", err)
 	}
 
 	s.Client = s3.NewFromConfig(*cfg)
